@@ -7,10 +7,27 @@ class DB {
     return authors.rows;
   };
 
-  static getAuthor = async (slug, admin) => {
-    let fields = 'full_name, surname, slug, alt_image_path as image_path, bio';
-    if (admin) fields = `id, ${fields}, created_at`;
-    const authors = await pool.query(`SELECT ${fields} FROM author WHERE slug = $1`, [slug]);
+  static getAuthorWithPieces = async (slug, admin) => {
+    const query = `
+      SELECT
+        author.full_name AS author_full_name,
+        author.surname AS author_surname,
+        author.slug AS author_slug,
+        author.alt_image_path AS author_image_path,
+        author.bio AS author_bio,
+        ${admin ? 'author.id AS author_id, author.created_at AS author_created_at,' : ''}
+        piece.id AS piece_id,
+        piece.title AS piece_title,
+        piece.alt_image_path AS piece_image_path
+      FROM
+        author
+      LEFT JOIN author_piece ON author.id = author_piece.author_id
+      LEFT JOIN piece ON author_piece.piece_id = piece.id
+      WHERE
+        author.slug = $1;
+    `
+
+    const authors = await pool.query(query, [slug]);
     return authors.rows;
   };
 
@@ -50,8 +67,29 @@ class DB {
     return issues.rows;
   };
 
+  static getPiece = async (id) => {
+    const query = `
+      SELECT
+        piece.id,
+        title,
+        piece.alt_image_path as image_path,
+        content,
+        author.full_name as author_full_name,
+        author.slug as author_slug
+      FROM
+        piece
+      LEFT JOIN author_piece ON piece.id = author_piece.piece_id
+      LEFT JOIN author ON author_piece.author_id = author.id
+      WHERE
+        piece.id = $1;
+    `;
+
+    const pieces = await pool.query(query, [id]);
+    return pieces.rows;
+  };
+
   static getPieceContent = async (id) => {
-    const pieces = await pool.query('SELECT contents FROM piece WHERE id = $1;', [id]);
+    const pieces = await pool.query('SELECT content FROM piece WHERE id = $1;', [id]);
     return pieces.rows;
   }
 }
