@@ -37,6 +37,11 @@ class DB {
     return issues.rows;
   };
 
+  static getIssuesIds = async () => {
+    const issues = await pool.query('SELECT id FROM issue ORDER BY created_at DESC');
+    return issues.rows;
+  };
+
   static getIssueWithPieces = async (id, admin) => {
     const query = `
       SELECT

@@ -13,7 +13,18 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
-  const rows = await db.getIssueWithPieces(req.params.id, true);
+  let id = req.params.id;
+
+  // get latest issue if id is 'latest'
+  let issuesIds;
+  if (id === 'latest') {
+    issuesIds = await db.getIssuesIds();
+    if (!issuesIds) {
+      return res.status(404).send({ error: 'Issue not found'});
+    }
+    id = issuesIds[0].id;
+  }
+  const rows = await db.getIssueWithPieces(id, admin=req.query.admin);
   if (rows.length === 0) {
     return res.status(404).send({ error: 'Issue not found'});
   }
@@ -30,6 +41,7 @@ router.get('/:id', async (req, res) => {
   };
 
   const blocks = {};
+  const pieces = {};
   rows.forEach(row => {
     if (!blocks[row.block_id]) {
       blocks[row.block_id] = {
@@ -37,21 +49,56 @@ router.get('/:id', async (req, res) => {
         title: row.block_title,
         pieces: [],
       };
+    };
+    
+    if (!pieces[row.piece_id]) {
+      pieces[row.piece_id] = {
+        id: row.piece_id,
+        block_id: row.block_id,
+        title: row.piece_title,
+        image_path: row.piece_image_path,
+        authors: [{
+          slug: row.author_slug,
+          full_name: row.author_full_name,
+        }],
+      };
+    } else {
+      pieces[row.piece_id].authors.push({
+        slug: row.author_slug,
+        full_name: row.author_full_name,
+      });
     }
-    blocks[row.block_id].pieces.push({
-      id: row.piece_id,
-      title: row.piece_title,
-      image_path: row.piece_image_path,
-      author_slug: row.author_slug,
-      author_full_name: row.author_full_name,
-    });
+  });
+
+  // blocks[row.block_id].pieces.push({
+  //   id: row.piece_id,
+  //   title: row.piece_title,
+  //   image_path: row.piece_image_path,
+  //   author_slug: row.author_slug,
+  //   author_full_name: row.author_full_name,
+  // });
+
+  Object.keys(pieces).forEach(key => {
+    blocks[pieces[key].block_id].pieces.push(
+      {
+        id: pieces[key].id,
+        title: pieces[key].title,
+        image_path: pieces[key].image_path,
+        authors: pieces[key].authors,
+      }
+    );
   });
 
   Object.keys(blocks).forEach(key => {
     issue.blocks.push(blocks[key]);
   });
 
-  return res.status(200).send(issue);
+  const data = {
+    issue: issue,
+    ...issuesIds && { issuesIds: issuesIds.map(issue => issue.id) },
+  }
+
+  return res.status(200).send(data);
 });
 
 module.exports = router;
