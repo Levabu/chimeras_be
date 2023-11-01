@@ -56,7 +56,8 @@ router.get('/:id', async (req, res) => {
         id: row.piece_id,
         block_id: row.block_id,
         title: row.piece_title,
-        image_path: row.piece_image_path,
+        // image_path: row.piece_image_path,
+        image_path: 'pieces/piece.jpg',  // TODO: remove this line when we have real images
         authors: [{
           slug: row.author_slug,
           full_name: row.author_full_name,
