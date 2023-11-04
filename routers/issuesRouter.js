@@ -71,14 +71,6 @@ router.get('/:id', async (req, res) => {
     }
   });
 
-  // blocks[row.block_id].pieces.push({
-  //   id: row.piece_id,
-  //   title: row.piece_title,
-  //   image_path: row.piece_image_path,
-  //   author_slug: row.author_slug,
-  //   author_full_name: row.author_full_name,
-  // });
-
   Object.keys(pieces).forEach(key => {
     blocks[pieces[key].block_id].pieces.push(
       {
