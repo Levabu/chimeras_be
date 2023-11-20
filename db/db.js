@@ -72,6 +72,34 @@ class DB {
     return issues.rows;
   };
 
+  static getPieces = async () => {
+    const query = `
+      SELECT
+        piece.id,
+        piece.title,
+        piece.alt_image_path as image_path,
+        piece.status,
+        piece.created_at,
+        piece.updated_at,
+        block.id as block_id,
+        block.title as block_title,
+        author.full_name as author_full_name,
+        author.slug as author_slug,
+        issue.id as issue_id,
+        issue.title as issue_title,
+        issue.status as issue_status
+      FROM
+        piece
+      LEFT JOIN author_piece ON piece.id = author_piece.piece_id
+      LEFT JOIN author ON author_piece.author_id = author.id
+      LEFT JOIN block ON piece.block_id = block.id
+      LEFT JOIN issue ON block.issue_id = issue.id
+    `;
+
+    const pieces = await pool.query(query);
+    return pieces.rows;
+  };
+
   static getPiece = async (id) => {
     const query = `
       SELECT
@@ -97,6 +125,70 @@ class DB {
     const pieces = await pool.query('SELECT content FROM piece WHERE id = $1;', [id]);
     return pieces.rows;
   }
+
+  static getBlocks = async () => {
+    const query = `
+      SELECT
+        id,
+        title,
+        issue_id,
+        created_at,
+        updated_at
+      FROM
+        block
+    `;
+    const blocks = await pool.query(query);
+    return blocks.rows;
+  }
+
+  static getBlock = async (id) => {
+    const query = `
+      SELECT
+        id,
+        title,
+        issue_id,
+        created_at,
+        updated_at
+      FROM
+        block
+      WHERE
+        id = $1;
+    `;
+    const blocks = await pool.query(query, [id]);
+    return blocks.rows;
+  }
+
+  static getUsers = async () => {
+    const query = `
+      SELECT
+        id,
+        email,
+        role,
+        created_at,
+        updated_at
+      FROM
+        user_
+    `;
+    const users = await pool.query(query);
+    return users.rows;
+  };
+
+  static getUser = async (id) => {
+    const query = `
+      SELECT
+        id,
+        email,
+        role,
+        created_at,
+        updated_at
+      FROM
+        user_
+      WHERE
+        id = $1;
+    `;
+    const users = await pool.query(query, [id]);
+    return users.rows;
+  };
 }
 
 module.exports = DB;

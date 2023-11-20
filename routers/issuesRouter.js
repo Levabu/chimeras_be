@@ -1,16 +1,16 @@
-const express = require('express');
+  const express = require('express');
 
-const router = express.Router();
+  const router = express.Router();
 
-const db = require('../db/db');
+  const db = require('../db/db');
 
-router.get('/', async (req, res) => {
-  const issues = await db.getIssues();
-  if (!issues) {
-    return res.status(404).send({ error: 'Authors not found'});
-  }
-  return res.status(200).send(issues);
-});
+  router.get('/', async (req, res) => {
+    const issues = await db.getIssues();
+    if (!issues) {
+      return res.status(404).send({ error: 'Authors not found'});
+    }
+    return res.status(200).send(issues);
+  });
 
 router.get('/:id', async (req, res) => {
   let id = req.params.id;
