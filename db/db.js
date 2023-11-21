@@ -31,8 +31,14 @@ class DB {
     return authors.rows;
   };
 
+  static getIssue = async (id) => {
+    const fields = 'id, title, issue_date, issue_number, image_path, annotation, status, created_at, updated_at';
+    const issues = await pool.query(`SELECT ${fields} FROM issue WHERE id = $1`, [id]);
+    return issues.rows;
+  };
+
   static getIssues = async () => {
-    const fields = 'id, title, issue_date, issue_number, alt_image_path as image_path, annotation, created_at';
+    const fields = 'id, title, issue_date, issue_number, image_path, annotation, status, created_at, updated_at';
     const issues = await pool.query(`SELECT ${fields} FROM issue`);
     return issues.rows;
   };
@@ -49,7 +55,7 @@ class DB {
         issue.title AS issue_title,
         issue.issue_date AS issue_date,
         issue.issue_number AS issue_number,
-        issue.alt_image_path AS issue_image_path,
+        issue.image_path AS issue_image_path,
         issue.annotation AS issue_annotation,
         ${admin ? 'issue.created_at AS issue_created_at,' : ''}
         block.id AS block_id,
@@ -70,6 +76,39 @@ class DB {
     `;
     const issues = await pool.query(query, [id]);
     return issues.rows;
+  };
+
+  static createIssue = async (issue) => {
+    const { title, issue_date, issue_number, image_path, annotation, status } = issue;
+    const query = `
+      INSERT INTO issue (title, issue_date, issue_number, image_path, annotation, status)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *;
+    `;
+    const values = [title, issue_date, issue_number, image_path, annotation, status];
+    const newIssue = await pool.query(query, values);
+    return newIssue.rows[0];
+  };
+
+  static updateIssue = async (issue) => {
+    const { id, title, issue_date, issue_number, image_path, annotation, status } = issue;
+    const query = `
+      UPDATE issue
+      SET title = $1, issue_date = $2, issue_number = $3, image_path = $4, annotation = $5, status = $6
+      WHERE id = $7
+      RETURNING *;
+    `;
+    const values = [title, issue_date, issue_number, image_path, annotation, status, id];
+    const updatedIssue = await pool.query(query, values);
+    return updatedIssue.rows;
+  };
+
+  static deleteIssue = async (id) => {
+    const query = `
+      DELETE FROM issue
+      WHERE id = $1;
+    `;
+    return (await pool.query(query, [id])).rowCount;
   };
 
   static getPieces = async () => {
