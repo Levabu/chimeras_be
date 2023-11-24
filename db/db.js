@@ -120,6 +120,7 @@ class DB {
         piece.status,
         piece.created_at,
         piece.updated_at,
+        piece.display_order,
         block.id as block_id,
         block.title as block_title,
         author.full_name as author_full_name,
@@ -147,7 +148,8 @@ class DB {
         piece.alt_image_path as image_path,
         content,
         author.full_name as author_full_name,
-        author.slug as author_slug
+        author.slug as author_slug,
+        display_order
       FROM
         piece
       LEFT JOIN author_piece ON piece.id = author_piece.piece_id
@@ -172,7 +174,8 @@ class DB {
         title,
         issue_id,
         created_at,
-        updated_at
+        updated_at,
+        display_order
       FROM
         block
     `;
@@ -187,7 +190,8 @@ class DB {
         title,
         issue_id,
         created_at,
-        updated_at
+        updated_at,
+        display_order
       FROM
         block
       WHERE
@@ -195,7 +199,40 @@ class DB {
     `;
     const blocks = await pool.query(query, [id]);
     return blocks.rows;
+  };
+
+  static createBlock = async (block) => {
+    const { title, issue_id } = block;
+    const query = `
+      INSERT INTO block (title, issue_id)
+      VALUES ($1, $2)
+      RETURNING *;
+    `;
+    const values = [title, issue_id];
+    const newBlock = await pool.query(query, values);
+    return newBlock.rows[0];
+  };
+
+  static updateBlock = async (id, block) => {
+    const { title, issue_id } = block;
+    const query = `
+      UPDATE block
+      SET title = $1, issue_id = $2
+      WHERE id = $3
+      RETURNING *;
+    `;
+    const values = [title, issue_id, id];
+    const updatedBlock = await pool.query(query, values);
+    return updatedBlock.rows;
   }
+
+  static deleteBlock = async (id) => {
+    const query = `
+      DELETE FROM block
+      WHERE id = $1;
+    `;
+    return (await pool.query(query, [id])).rowCount;
+  };
 
   static getUsers = async () => {
     const query = `
@@ -230,4 +267,4 @@ class DB {
   };
 }
 
-module.exports = DB;
+module.exports = { DB, pool };

@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 
-const db = require('../db/db');
+const { DB: db, pool } = require('../db/db');
 
 router.get('/', async (req, res) => {
   const authors = await db.getAuthors(admin=req.query.admin);

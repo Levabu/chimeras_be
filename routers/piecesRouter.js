@@ -2,12 +2,12 @@ const express = require('express');
 
 const router = express.Router();
 
-const db = require('../db/db');
+const { DB: db, pool } = require('../db/db');
 
 router.get('/', async (req, res) => {
   try {
     const rows = await db.getPieces();
-    console.log(rows);
+    // console.log(rows);
     const pieces = {};
 
     for (const row of rows) {
@@ -26,6 +26,7 @@ router.get('/', async (req, res) => {
           issue_status: row.issue_status,
           created_at: row.created_at,
           updated_at: row.updated_at,
+          display_order: row.display_order,
         };
       }
       if (row.author_full_name) {
