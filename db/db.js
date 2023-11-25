@@ -2,7 +2,7 @@ const pool = require('./postgres-config').pool;
 
 class DB {
   static getAuthors = async (admin) => {
-    const fields = admin ? 'id, full_name, surname, slug, alt_image_path as image_path, bio, created_at' : 'full_name, surname, slug';
+    const fields = admin ? 'id, full_name, surname, slug, alt_image_path as image_path, bio, created_at, updated_at' : 'full_name, surname, slug';
     const authors = await pool.query(`SELECT ${fields} FROM author`);
     return authors.rows;
   };
@@ -18,7 +18,7 @@ class DB {
         ${admin ? 'author.id AS author_id, author.created_at AS author_created_at,' : ''}
         piece.id AS piece_id,
         piece.title AS piece_title,
-        piece.alt_image_path AS piece_image_path
+        piece.image_path AS piece_image_path
       FROM
         author
       LEFT JOIN author_piece ON author.id = author_piece.author_id
@@ -62,7 +62,7 @@ class DB {
         block.title AS block_title,
         piece.id AS piece_id,
         piece.title AS piece_title,
-        piece.alt_image_path AS piece_image_path,
+        piece.image_path AS piece_image_path,
         author.slug AS author_slug,
         author.full_name AS author_full_name
       FROM
@@ -116,13 +116,14 @@ class DB {
       SELECT
         piece.id,
         piece.title,
-        piece.alt_image_path as image_path,
+        piece.image_path,
         piece.status,
         piece.created_at,
         piece.updated_at,
         piece.display_order,
         block.id as block_id,
         block.title as block_title,
+        author.id as author_id,
         author.full_name as author_full_name,
         author.slug as author_slug,
         issue.id as issue_id,
@@ -145,7 +146,7 @@ class DB {
       SELECT
         piece.id,
         title,
-        piece.alt_image_path as image_path,
+        piece.image_path,
         content,
         author.full_name as author_full_name,
         author.slug as author_slug,
@@ -167,6 +168,53 @@ class DB {
     return pieces.rows;
   }
 
+  static createPiece = async (piece) => {
+    const { title, image_path, content, status, block_id } = piece;
+    const query = `
+      INSERT INTO piece (title, image_path, content, status, block_id)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    const values = [title, image_path, content, status, block_id];
+    const newPiece = await pool.query(query, values);
+    return newPiece.rows[0];
+  };
+
+  static updatePiece = async (id, piece) => {
+    const { title, image_path, content, status, block_id } = piece;
+    // conditional query depending on whther content is provided
+    const query = `
+    WITH updated_piece AS (
+      UPDATE piece
+      SET title = $1, image_path = $2, status = $3, block_id = $4 ${content ? ', content = $6' : ''}
+      WHERE id = $5
+      RETURNING *
+    ) 
+    SELECT
+      updated_piece.*,
+      block.title as block_title,
+      issue.id as issue_id,
+      issue.title as issue_title,
+      issue.status as issue_status
+    FROM
+      updated_piece
+      LEFT JOIN block ON updated_piece.block_id = block.id
+      LEFT JOIN issue ON block.issue_id = issue.id;
+    `;
+    const values = [title, image_path, status, block_id, id];
+    if (content) values.push(content);
+    const updatedPiece = await pool.query(query, values);
+    return updatedPiece.rows;
+  };
+
+  static deletePiece = async (id) => {
+    const query = `
+      DELETE FROM piece
+      WHERE id = $1;
+    `;
+    return (await pool.query(query, [id])).rowCount;
+  };
+
   static getBlocks = async () => {
     const query = `
       SELECT
@@ -178,6 +226,8 @@ class DB {
         display_order
       FROM
         block
+      ORDER BY
+        id;
     `;
     const blocks = await pool.query(query);
     return blocks.rows;

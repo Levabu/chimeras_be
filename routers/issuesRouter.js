@@ -143,6 +143,12 @@ router.post('/', upload.single('image'), async (req, res) => {
 
 router.put('/:id', upload.single('image'), async (req, res) => {
   try {
+    // check if issue exists
+    const rowCount = (await pool.query('SELECT id FROM issue WHERE id = $1;', [req.params.id])).rowCount;
+    if (rowCount === 0) {
+      return res.status(404).send({ error: 'Issue not found'});
+    };
+
     // update image
     const old_image_path = req.body.image_path;
     let image_path;
@@ -163,14 +169,35 @@ router.put('/:id', upload.single('image'), async (req, res) => {
       image_path = old_image_path;
     }
 
+    // update blocks display_order
+    const { blocks_order: unparsedBlockOrder, ...data } = req.body;
+    const blocks_order = unparsedBlockOrder && unparsedBlockOrder.split(',').map(id => parseInt(id));
+    if (blocks_order && blocks_order.length > 0) {
+      // check if blocks exist
+      const rowCount = (await pool.query('SELECT id FROM block WHERE id = ANY($1);', [blocks_order])).rowCount;
+      if (rowCount !== blocks_order.length) {
+        return res.status(404).send({ error: 'Block not found'});
+      };
+      await pool.query(`
+        UPDATE block SET
+          display_order = c.display_order
+        FROM (
+          VALUES
+            ${blocks_order.map((block_id, index) => `(${block_id}, ${index + 1})`).join(',')}
+        ) AS c(id, display_order)
+        WHERE block.id = c.id;
+      `);
+    }
+
     // update issue
-    const rows = await db.updateIssue({...req.body, image_path});
+    const rows = await db.updateIssue({...data, image_path});
     if (rows.length === 0) {
       return res.status(404).send({ error: 'Issue not found'});
     }
     const issue = rows[0];
     return res.status(200).send(issue);
   } catch (err) {
+    console.log(err);
     return res.status(500).send({ error: err });
   }
 });

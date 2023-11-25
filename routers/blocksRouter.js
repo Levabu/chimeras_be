@@ -7,6 +7,7 @@ const { DB: db, pool } = require('../db/db');
 router.get('/', async (req, res) => {
   try {
     const blocks = await db.getBlocks();
+    // console.log(blocks);
     return res.status(200).send(blocks);
   } catch (err) {
     return res.status(500).send({ error: err });
