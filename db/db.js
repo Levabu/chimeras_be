@@ -2,7 +2,7 @@ const pool = require('./postgres-config').pool;
 
 class DB {
   static getAuthors = async (admin) => {
-    const fields = admin ? 'id, full_name, surname, slug, alt_image_path as image_path, bio, created_at, updated_at' : 'full_name, surname, slug';
+    const fields = admin ? 'id, full_name, surname, slug, image_path, bio, created_at, updated_at' : 'full_name, surname, slug';
     const authors = await pool.query(`SELECT ${fields} FROM author`);
     return authors.rows;
   };
@@ -13,7 +13,7 @@ class DB {
         author.full_name AS author_full_name,
         author.surname AS author_surname,
         author.slug AS author_slug,
-        author.alt_image_path AS author_image_path,
+        author.image_path AS author_image_path,
         author.bio AS author_bio,
         ${admin ? 'author.id AS author_id, author.created_at AS author_created_at,' : ''}
         piece.id AS piece_id,
@@ -29,6 +29,31 @@ class DB {
 
     const authors = await pool.query(query, [slug]);
     return authors.rows;
+  };
+
+  static createAuthor = async (author) => {
+    const { full_name, surname, slug, image_path, bio } = author;
+    const query = `
+      INSERT INTO author (full_name, surname, slug, image_path, bio)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    const values = [full_name, surname, slug, image_path, bio];
+    const newAuthor = await pool.query(query, values);
+    return newAuthor.rows[0];
+  };
+
+  static updateAuthor = async (author) => {
+    const { id, full_name, surname, slug, image_path, bio } = author;
+    const query = `
+      UPDATE author
+      SET full_name = $1, surname = $2, slug = $3, image_path = $4, bio = $5, updated_at = NOW()
+      WHERE id = $6
+      RETURNING *;
+    `;
+    const values = [full_name, surname, slug, image_path, bio, id];
+    const updatedAuthor = await pool.query(query, values);
+    return updatedAuthor.rows;
   };
 
   static getIssue = async (id) => {
